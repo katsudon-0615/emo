@@ -1,0 +1,247 @@
+# エモコネクト MVP開発ドキュメント
+
+## 1. MVP要件定義書
+
+### 1.1 目的
+- 感情を共有するSNSの実現可能性検証
+- 基本機能の有用性確認
+- ユーザーフィードバックの収集
+
+### 1.2 主要機能
+- ユーザー認証
+- 感情投稿（テキスト + 感情タグ）
+- タイムライン表示
+- 感情分析
+- いいね/コメント
+
+### 1.3 対象ユーザー
+- 10-20代のSNSユーザー
+- 感情表現に関心がある層
+- メンタルヘルスに関心がある層
+
+### 1.4 成功指標
+- 月間アクティブユーザー: 100人
+- 投稿数: 1ユーザーあたり週3回
+- リテンション: 7日後30%
+
+## 2. 最小限の設計ドキュメント
+
+### 2.1 画面設計（Figma）
+```
+主要画面：
+1. ログイン/登録画面
+2. タイムライン画面
+3. 投稿画面
+4. プロフィール画面
+```
+
+### 2.2 データモデル
+```sql
+-- ユーザー
+users (
+    id UUID PRIMARY KEY,
+    username TEXT,
+    created_at TIMESTAMP
+)
+
+-- 投稿
+posts (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    content TEXT,
+    emotion_data JSONB,
+    created_at TIMESTAMP
+)
+
+-- インタラクション
+interactions (
+    id UUID PRIMARY KEY,
+    post_id UUID REFERENCES posts(id),
+    user_id UUID REFERENCES users(id),
+    type TEXT,
+    created_at TIMESTAMP
+)
+```
+
+### 2.3 API設計
+```typescript
+// エンドポイント
+POST /api/auth/login
+POST /api/auth/register
+GET /api/posts
+POST /api/posts
+POST /api/posts/{id}/like
+POST /api/posts/{id}/comment
+```
+
+## 3. 開発フロー
+
+### 3.1 環境構築（1週間）
+```bash
+# 開発環境セットアップ
+1. VS Code + 拡張機能インストール
+2. Flutter環境構築
+3. Supabase設定
+4. バージョン管理設定
+```
+
+もちろんです。まずは、環境構築から始めましょう。
+
+### 環境構築
+
+開発環境を整えるために、以下の手順に従ってください。
+
+1. **VS Code + 拡張機能インストール**
+   - [Visual Studio Code](https://code.visualstudio.com/) をインストールします。
+   - 必要な拡張機能をインストールします（例: Flutter, Python, GitHub）。
+
+2. **Flutter環境構築**
+   - [Flutter](https://flutter.dev/docs/get-started/install) をインストールします。
+   - 環境変数 `PATH` に Flutter のパスを追加します。
+   - `flutter doctor` コマンドを実行して、セットアップが正しく行われたか確認します。
+
+3. **Supabase設定**
+   - [Supabase](https://supabase.io/) にサインアップし、プロジェクトを作成します。
+   - プロジェクトのAPIキーとURLを取得します。
+
+4. **バージョン管理設定**
+   - [Git](https://git-scm.com/) をインストールします。
+   - GitHubでリポジトリを作成し、ローカルリポジトリと連携します。
+
+以下に、環境構築の手順をまとめたスクリプトを示します。
+
+### 3.2 フロントエンド開発（3週間）
+```dart
+Week 1:
+- ログイン/登録画面
+- タイムライン画面の基本実装
+
+Week 2:
+- 投稿機能実装
+- 感情選択UI実装
+
+Week 3:
+- インタラクション機能
+- プロフィール画面
+```
+
+### 3.3 バックエンド開発（2週間）
+```python
+Week 1:
+- データベース設定
+- 基本API実装
+
+Week 2:
+- 感情分析エンジン実装
+- API完成
+```
+
+## 4. 使用技術
+
+### 4.1 フロントエンド
+```yaml
+- Flutter 3.x
+- Provider（状態管理）
+- Supabase Flutter SDK
+- Flutter Secure Storage
+```
+
+### 4.2 バックエンド
+```yaml
+- Supabase
+- Python 3.x
+- NLTK
+- TextBlob
+- Vercel（デプロイ）
+```
+
+### 4.3 開発ツール
+```yaml
+- VS Code
+- GitHub
+- Figma
+- Postman
+```
+
+## 5. 感情分析実装
+
+### 5.1 基本実装
+```python
+from textblob import TextBlob
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+class EmotionAnalyzer:
+    def __init__(self):
+        self.sia = SentimentIntensityAnalyzer()
+    
+    def analyze_text(self, text: str) -> dict:
+        # TextBlobによる基本感情分析
+        blob = TextBlob(text)
+        # VADERによる詳細分析
+        vader_scores = self.sia.polarity_scores(text)
+        
+        return {
+            'polarity': blob.sentiment.polarity,
+            'subjectivity': blob.sentiment.subjectivity,
+            'vader_scores': vader_scores
+        }
+    
+    def get_emotion_tag(self, scores: dict) -> str:
+        # 感情スコアから感情タグを決定
+        if scores['polarity'] > 0.3:
+            return '喜び'
+        elif scores['polarity'] < -0.3:
+            return '悲しみ'
+        return '普通'
+
+class EmotionAPI:
+    def __init__(self):
+        self.analyzer = EmotionAnalyzer()
+    
+    async def analyze_post(self, text: str) -> dict:
+        analysis = self.analyzer.analyze_text(text)
+        emotion_tag = self.analyzer.get_emotion_tag(analysis)
+        
+        return {
+            'analysis': analysis,
+            'emotion_tag': emotion_tag,
+            'timestamp': datetime.now().isoformat()
+        }
+```
+
+### 5.2 使用例
+```python
+# API利用例
+async def handle_post(post_text: str):
+    emotion_api = EmotionAPI()
+    result = await emotion_api.analyze_post(post_text)
+    
+    # Supabaseに保存
+    await supabase.table('posts').insert({
+        'content': post_text,
+        'emotion_data': result,
+        'created_at': datetime.now()
+    })
+```
+
+## 6. デプロイ計画
+
+### 6.1 デプロイ環境
+```yaml
+フロントエンド:
+- App Store（iOS）
+- Play Store（Android）
+
+バックエンド:
+- Vercel
+- Supabase
+```
+
+### 6.2 デプロイステップ
+```bash
+1. テスト環境デプロイ
+2. ベータテスト実施（2週間）
+3. 本番環境デプロイ
+```
+
+この最小限のドキュメントに基づいて開発を進めることで、効率的なMVP開発が可能になります。具体的な実装方法や、追加の詳細が必要な場合は、お申し付けください。
